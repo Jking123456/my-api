@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (now > EXPIRY) {
     const expiredMsg = 
       `gg.alert("⚠️ [ SUBSCRIPTION EXPIRED ] ⚠️\\n\\n` +
-      `Your access to HOMER PREMIUM has ended.\\n\\n` +
+      `Your access to PRINZVAN PREMIUM has ended.\\n\\n` +
       `💎 To renew your key, contact me at:\\n` +
       `📱 Telegram: https://t.me/casper_marduk\\n\\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\\n` +
