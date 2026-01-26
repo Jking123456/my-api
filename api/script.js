@@ -1,12 +1,10 @@
 export default async function handler(req, res) {
   const { key, pkg } = req.query;
 
-  // 1. Auth Check
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
     return res.status(401).send('gg.alert("❌ Unauthorized!")');
   }
 
-  // 2. Server-Side Time Check
   const EXPIRY = parseInt(process.env.EXPIRY_TIMESTAMP) || 1800000000; 
   const now = Math.floor(Date.now() / 1000);
 
@@ -14,7 +12,6 @@ export default async function handler(req, res) {
     return res.status(403).send('gg.alert("⌛ [EXPIRED]\\nContact @HOMER for renewal.")');
   }
 
-  // 3. Fetch Script from GitHub
   const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
     headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}` }
   });
@@ -23,13 +20,12 @@ export default async function handler(req, res) {
     let rawScript = await response.text();
     rawScript = rawScript.trim().replace(/\r/g, ""); 
 
-    // Calculate time left for display
     const diff = EXPIRY - now;
     const h = Math.floor(diff / 3600);
     const m = Math.floor((diff % 3600) / 60);
     const timeStr = `🕒 Expire: ${h}h ${m}m`;
 
-    // 4. Injection: We use _G.time_left to avoid syntax errors with local variables
+    // Global injection
     const finalScript = `_G.time_left = "${timeStr}";\n` + rawScript;
 
     const KEY_A = "ClientPart_99"; 
