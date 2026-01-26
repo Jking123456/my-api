@@ -1,16 +1,14 @@
 export default async function handler(req, res) {
     const { key, pkg } = req.query;
-    const userAgent = req.headers['user-agent'];
-
-    // 1. STRICT USER-AGENT CHECK
-    // Only serve the script if the ID matches EXACTLY.
-    if (userAgent !== 'Prinzvan-Engine-v2-Secret-Key') {
+    
+    // 1. HARD LOCK: Check for a custom secret token in the headers
+    // If this specific header isn't present, send the decoy IMMEDIATELY.
+    if (req.headers['x-prinzvan-token'] !== 'SECRET_PASS_7788') {
         res.setHeader('Content-Type', 'text/plain');
-        // This is the decoy the sniffer will catch
-        return res.status(200).send('-- [SYSTEM] Script is now running...\n-- Authenticating with Game Guardian...');
+        return res.status(200).send('-- [SYSTEM] Script is now running...\n-- Secure Tunnel Established.');
     }
 
-    // 2. KEY & PACKAGE VALIDATION
+    // 2. Validate Key and Package as usual
     if (key === "170993" && pkg === "com.mobile.legends") {
         try {
             const GITHUB_URL = "https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua";
@@ -28,5 +26,5 @@ export default async function handler(req, res) {
         }
     }
 
-    return res.status(403).send('gg.alert("❌ Access Denied: Invalid License")');
+    return res.status(403).send('gg.alert("❌ Access Denied")');
 }
