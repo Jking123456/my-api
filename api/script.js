@@ -1,30 +1,22 @@
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
 export default async function handler(req, res) {
     const { key, pkg } = req.query;
-    
-    // 1. HARD LOCK: Check for a custom secret token in the headers
-    // If this specific header isn't present, send the decoy IMMEDIATELY.
-    if (req.headers['x-prinzvan-token'] !== 'SECRET_PASS_7788') {
-        res.setHeader('Content-Type', 'text/plain');
-        return res.status(200).send('-- [SYSTEM] Script is now running...\n-- Secure Tunnel Established.');
+    const userAgent = req.headers['user-agent'];
+
+    // Decoy for Sniffers
+    if (userAgent !== 'Homer-Engine-v2') {
+        return res.status(200).send("U0lTVEVNQSBBQ1RJVk8="); // Base64 decoy
     }
 
-    // 2. Validate Key and Package as usual
-    if (key === "170993" && pkg === "com.mobile.legends") {
-        try {
-            const GITHUB_URL = "https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua";
-            const response = await fetch(GITHUB_URL, {
-                headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}` }
-            });
-
-            if (!response.ok) throw new Error('Source Fetch Failed');
-            const code = await response.text();
-            
-            res.setHeader('Content-Type', 'text/plain');
-            return res.status(200).send(code);
-        } catch (error) {
-            return res.status(500).send('gg.alert("❌ Server Error: 500")');
-        }
+    if (key === "170993") {
+        const response = await fetch("https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua", {
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+        });
+        const rawCode = await response.text();
+        
+        // Simple Base64 "Scramble" so Sniffers can't read it
+        const scrambled = Buffer.from(rawCode).toString('base64');
+        return res.status(200).send(scrambled);
     }
-
-    return res.status(403).send('gg.alert("❌ Access Denied")');
 }
