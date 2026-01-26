@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       `💎 To renew your key, contact me at:\\n` +
       `📱 Telegram: https://t.me/casper_marduk\\n\\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\\n` +
-      `Stay safe and good luck, Summoner!")`;
+      `Play safe and good luck, Owner!")`;
     
     return res.status(403).send(expiredMsg);
   }
