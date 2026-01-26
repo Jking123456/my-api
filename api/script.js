@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     const rawScript = await response.text();
     
     // THE SPLIT KEY LOGIC
-    const KEY_A = "ClientPart_99"; // Hardcoded in Loader
+    const KEY_A = "users"; // Hardcoded in Loader
     const KEY_B = process.env.XOR_KEY_B; // Hidden in Vercel
     const FULL_KEY = KEY_A + KEY_B;
 
