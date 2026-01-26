@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     rawScript = rawScript.trim().replace(/\r/g, ""); 
 
     const KEY_A = "ClientPart_99"; 
-    const KEY_B = process.env.XOR_KEY_B || ""; 
+    const KEY_B = process.env.XOR_KEY_B || "ServerPart_77"; 
     const FULL_KEY = KEY_A + KEY_B;
 
     // Convert strings to Byte Buffers for mathematical stability
