@@ -1,16 +1,20 @@
 export default async function handler(req, res) {
   const { key, pkg } = req.query;
 
-  // 1. Security Check
+  // 1. Auth Check
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
     return res.status(401).send('gg.alert("❌ Unauthorized!")');
   }
 
+  // 2. Fetch Secrets from Vercel Environment Variables
   const EXPIRY = parseInt(process.env.EXPIRY_TIMESTAMP) || 1800000000;
-  const now = Math.floor(Date.now() / 1000);
-  if (now > EXPIRY) return res.status(403).send('gg.alert("⌛ Expired!")');
+  const MH_VALUE = process.env.MAPHACK_VALUE || "98784247823"; // Pulled from Vercel Env
+  const DRONE_DATA = process.env.DRONE_DATA_JSON || "{}";      // Pulled from Vercel Env
 
-  // 2. Fetch Script Template
+  const now = Math.floor(Date.now() / 1000);
+  if (now > EXPIRY) return res.status(403).send('gg.alert("⌛ [EXPIRED]")');
+
+  // 3. Fetch Script Template from GitHub
   const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
     headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}` }
   });
@@ -19,15 +23,15 @@ export default async function handler(req, res) {
     let rawScript = await response.text();
     const timeStr = `🕒 Expire: ${Math.floor((EXPIRY - now) / 3600)}h`;
 
-    // 3. CLEAN INJECTION (Fixed the luaj.o syntax error)
+    // 4. Inject the secret data as Global Variables (_G)
     const injection = 
-      `_G.mh_v = ${process.env.MAPHACK_VALUE || "98784247823"};\n` +
-      `_G.dr_p = ${process.env.DRONE_DATA_JSON || "{}"};\n` +
-      `_G.time_left = "${timeStr}";\n\n`;
+      `_G.time_left = "${timeStr}";\n` +
+      `_G.mh_v = ${MH_VALUE};\n` +
+      `_G.dr_p = ${DRONE_DATA};\n\n`;
 
     const finalScript = injection + rawScript;
 
-    // 4. XOR Encryption Handshake
+    // 5. Encrypt with XOR
     const KEY_A = "ClientPart_99"; 
     const KEY_B = process.env.XOR_KEY_B || "ServerPart_77"; 
     const dataBuf = Buffer.from(finalScript);
@@ -41,6 +45,6 @@ export default async function handler(req, res) {
     res.setHeader('X-Session-Token', KEY_B);
     res.status(200).send(encryptedArray.join(",")); 
   } else {
-    res.status(500).send('gg.alert("❌ GitHub Error")');
+    res.status(500).send('gg.alert("❌ GitHub Sync Failed")');
   }
 }
