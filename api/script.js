@@ -10,16 +10,15 @@ function xor(data, key) {
 export default async function handler(req, res) {
   const { key, pkg } = req.query;
   const userAgent = req.headers['user-agent'] || "";
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  // 1. VPN/Sniffer Guard
-  if (/HttpCanary|Postman|curl/i.test(userAgent)) {
+  // 1. Basic Sniffer Guard
+  if (/HttpCanary|Postman|curl|Python/i.test(userAgent)) {
     return res.status(403).send('gg.alert("🚫 Sniffer Detected!") os.exit()');
   }
 
-  // 2. Validate Key & Package
+  // 2. Validate Key & Package (Ensure ADMIN_KEY is set in Vercel)
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
-    return res.status(401).send('gg.alert("⚠️ Unauthorized Access!") os.exit()');
+    return res.status(401).send('gg.alert("⚠️ Unauthorized or Invalid Package!") os.exit()');
   }
 
   // 3. Fetch Script from GitHub
@@ -33,19 +32,20 @@ export default async function handler(req, res) {
     
     // THE SPLIT KEY LOGIC
     const KEY_A = "users"; // Hardcoded in Loader
-    const KEY_B = process.env.XOR_KEY_B; // Hidden in Vercel
+    const KEY_B = process.env.XOR_KEY_B || "ServerPart_Fallback"; 
     const FULL_KEY = KEY_A + KEY_B;
 
-    const wrapped = `print("[system] Securely Loaded")\n${rawScript}`;
+    const wrapped = `print("[system] script is now running")\n${rawScript}`;
     
     // Encrypt and Encode
     const encrypted = xor(wrapped, FULL_KEY);
+    // Use 'binary' to ensure XORed bytes don't get corrupted by UTF-8 conversion
     const encoded = Buffer.from(encrypted, 'binary').toString('base64');
 
-    // Send Key_B via a custom header so the Loader can find it
+    // Send Key_B via a custom header
     res.setHeader('X-Session-Token', KEY_B);
     res.status(200).send(encoded);
   } else {
-    res.status(500).send('gg.alert("❌ Server Sync Error")');
+    res.status(500).send('gg.alert("❌ Server Sync Error: Check GitHub Token")');
   }
 }
