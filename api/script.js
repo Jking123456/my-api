@@ -3,16 +3,27 @@ export default async function handler(req, res) {
 
   // 1. Auth Check
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
-    return res.status(401).send('gg.alert("❌ Unauthorized!")');
+    return res.status(401).send('gg.alert("❌ Unauthorized Access!")');
   }
 
-  // 2. Fetch Secrets from Vercel Environment Variables
+  // 2. Fetch Secrets and Check Expiry
   const EXPIRY = parseInt(process.env.EXPIRY_TIMESTAMP) || 1800000000;
-  const MH_VALUE = process.env.MAPHACK_VALUE || "98784247823"; // Pulled from Vercel Env
-  const DRONE_DATA = process.env.DRONE_DATA_JSON || "{}";      // Pulled from Vercel Env
-
   const now = Math.floor(Date.now() / 1000);
-  if (now > EXPIRY) return res.status(403).send('gg.alert("⌛ [EXPIRED]")');
+
+  if (now > EXPIRY) {
+    const expiredMsg = 
+      `gg.alert("⚠️ [ SUBSCRIPTION EXPIRED ] ⚠️\\n\\n` +
+      `Your access to HOMER PREMIUM has ended.\\n\\n` +
+      `💎 To renew your key, contact me at:\\n` +
+      `📱 Telegram: https://t.me/casper_marduk\\n\\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\\n` +
+      `Stay safe and good luck, Summoner!")`;
+    
+    return res.status(403).send(expiredMsg);
+  }
+
+  const MH_VALUE = process.env.MAPHACK_VALUE || "98784247823";
+  const DRONE_DATA = process.env.DRONE_DATA_JSON || "{}";
 
   // 3. Fetch Script Template from GitHub
   const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
@@ -21,9 +32,11 @@ export default async function handler(req, res) {
 
   if (response.ok) {
     let rawScript = await response.text();
-    const timeStr = `🕒 Expire: ${Math.floor((EXPIRY - now) / 3600)}h`;
+    const diff = EXPIRY - now;
+    const timeStr = `🕒 Expire: ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
 
     // 4. Inject the secret data as Global Variables (_G)
+    // Using semicolon and explicit assignment to prevent syntax errors
     const injection = 
       `_G.time_left = "${timeStr}";\n` +
       `_G.mh_v = ${MH_VALUE};\n` +
