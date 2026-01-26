@@ -1,22 +1,37 @@
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
 export default async function handler(req, res) {
-    const { key, pkg } = req.query;
-    const userAgent = req.headers['user-agent'];
+  const { key, pkg } = req.query;
+  const userAgent = req.headers['user-agent'] || "";
+  
+  // 1. RELAXED SNIFFER CHECK
+  const badAgents = ["HttpCanary", "Postman", "Python", "curl", "Go-http-client"];
+  if (badAgents.some(agent => userAgent.includes(agent))) {
+    return res.status(403).send('gg.alert("ðŸš« SNIFFER TOOLS DETECTED!") os.exit()');
+  }
 
-    // Decoy for Sniffers
-    if (userAgent !== 'Homer-Engine-v2') {
-        return res.status(200).send("U0lTVEVNQSBBQ1RJVk8="); // Base64 decoy
-    }
+  // 2. PACKAGE VERIFICATION (Updated for Mobile Legends)
+  const EXPECTED_GAME = "com.mobile.legends"; 
+  
+  if (pkg !== EXPECTED_GAME) {
+     return res.status(403).send(`gg.alert("ðŸš« Process Error!\\nMake sure Game Guardian is attached to Mobile Legends.") os.exit()`);
+  }
 
-    if (key === "170993") {
-        const response = await fetch("https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua", {
-            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-        });
-        const rawCode = await response.text();
-        
-        // Simple Base64 "Scramble" so Sniffers can't read it
-        const scrambled = Buffer.from(rawCode).toString('base64');
-        return res.status(200).send(scrambled);
-    }
+  // 3. KEY CHECK
+  if (key !== process.env.ADMIN_KEY) {
+    return res.status(401).send('gg.alert("âŒ Invalid License!") os.exit()');
+  }
+
+  // 4. FETCH FROM GITHUB
+  const GH_TOKEN = process.env.GITHUB_TOKEN;
+  const url = `https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`;
+
+  const response = await fetch(url, {
+    headers: { 'Authorization': `token ${GH_TOKEN}` }
+  });
+
+  if (response.ok) {
+    const scriptText = await response.text();
+    res.status(200).send(scriptText);
+  } else {
+    res.status(500).send('gg.alert("âŒ Server Sync Error: Check GitHub Token")');
+  }
 }
