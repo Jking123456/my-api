@@ -1,15 +1,16 @@
 export default async function handler(req, res) {
   const { key, pkg } = req.query;
 
-  // 1. Auth Check
+  // 1. Authorization Check
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
     return res.status(401).send('gg.alert("❌ Unauthorized!")');
   }
 
-  // 2. Fetch Secrets from Vercel Environment Variables
+  // 2. Fetch Secrets from Vercel Env
   const EXPIRY = parseInt(process.env.EXPIRY_TIMESTAMP) || 1800000000;
-  const MH_VALUE = process.env.MAPHACK_VALUE || "98784247823"; // Pulled from Vercel Env
-  const DRONE_DATA = process.env.DRONE_DATA_JSON || "{}";      // Pulled from Vercel Env
+  const MH_VALUE = process.env.MAPHACK_VALUE || "98784247823";
+  const DRONE_DATA = process.env.DRONE_DATA_JSON || "{}";
+  const ICON_VALUE = process.env.MINIMAP_VAL || "24577"; // The 'ON' toggle
 
   const now = Math.floor(Date.now() / 1000);
   if (now > EXPIRY) return res.status(403).send('gg.alert("⌛ [EXPIRED]")');
@@ -23,15 +24,16 @@ export default async function handler(req, res) {
     let rawScript = await response.text();
     const timeStr = `🕒 Expire: ${Math.floor((EXPIRY - now) / 3600)}h`;
 
-    // 4. Inject the secret data as Global Variables (_G)
+    // 4. Secure Global Injection
     const injection = 
       `_G.time_left = "${timeStr}";\n` +
       `_G.mh_v = ${MH_VALUE};\n` +
-      `_G.dr_p = ${DRONE_DATA};\n\n`;
+      `_G.dr_p = ${DRONE_DATA};\n` +
+      `_G.mi_v = ${ICON_VALUE};\n\n`;
 
     const finalScript = injection + rawScript;
 
-    // 5. Encrypt with XOR
+    // 5. XOR Encryption Handshake
     const KEY_A = "ClientPart_99"; 
     const KEY_B = process.env.XOR_KEY_B || "ServerPart_77"; 
     const dataBuf = Buffer.from(finalScript);
