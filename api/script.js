@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const ggError = 
       `gg.alert("❌ SECURITY ALERT: UNRECOGNIZED ENVIRONMENT\\n\\n` +
       `This script is locked to official PRINZVAN builds.\\n` +
-      `Please use the authorized Game Guardian (Pkg: ${REQUIRED_GG})")\n` +
+      `Please use the authorized Game Guardian (Pkg: ${REQUIRED_GG})")\n inside of lulubox super` +
       `os.exit()`;
     return res.status(403).send(ggError);
   }
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       `💎 To renew your key, contact me at:\\n` +
       `📱 Telegram: https://t.me/casper_marduk\\n\\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\\n` +
-      `Stay safe and good luck, Owner!")`;
+      `Play safe and good luck, Owner!")`;
     
     return res.status(403).send(expiredMsg);
   }
