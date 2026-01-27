@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   // 🛡️ Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).send('gg.alert("❌ Method Not Allowed. Use POST.")');
+    return res.status(405).send('gg.alert("❌ Ah ULOL!!!")');
   }
 
   const { key, pkg } = req.body;
