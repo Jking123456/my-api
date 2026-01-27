@@ -1,9 +1,22 @@
 export default async function handler(req, res) {
-  const { key, pkg } = req.query;
-
   // 1. Authorization & Package Check
+  // We now accept 'gg_pkg' from the client to verify the Game Guardian version
+  const { key, pkg, gg_pkg } = req.query;
+  const REQUIRED_GG = "com.uwrzaeg";
+
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
     return res.status(401).send('gg.alert("❌ Unauthorized Access!")');
+  }
+
+  // 🛡️ NEW: Game Guardian Package Lock
+  // If the client doesn't send the correct GG package name, we block them.
+  if (gg_pkg !== REQUIRED_GG) {
+    const ggError = 
+      `gg.alert("❌ SECURITY ALERT: UNRECOGNIZED ENVIRONMENT\\n\\n` +
+      `This script is locked to official PRINZVAN builds.\\n` +
+      `Please use the authorized Game Guardian (Pkg: ${REQUIRED_GG})")\n` +
+      `os.exit()`;
+    return res.status(403).send(ggError);
   }
 
   // 2. Check Expiry
@@ -17,7 +30,7 @@ export default async function handler(req, res) {
       `💎 To renew your key, contact me at:\\n` +
       `📱 Telegram: https://t.me/casper_marduk\\n\\n` +
       `━━━━━━━━━━━━━━━━━━━━━━\\n` +
-      `Ptay safe and good luck, Owner!")`;
+      `Stay safe and good luck, Owner!")`;
     
     return res.status(403).send(expiredMsg);
   }
@@ -32,7 +45,7 @@ export default async function handler(req, res) {
     const diff = EXPIRY - now;
     const timeStr = `🕒 Expire: ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
 
-    // 4. CLEAN INJECTION (Prevents 'failed read line')
+    // 4. CLEAN INJECTION
     const injection = 
       `_G.time_left = "${timeStr}";\n` +
       `_G.mh_v = ${process.env.MAPHACK_VALUE || "98784247823"};\n` +
@@ -40,11 +53,13 @@ export default async function handler(req, res) {
 
     const finalScript = injection + rawScript;
 
-    // 5. XOR Encryption
+    // 5. XOR Encryption (Now includes GG package in the security hash)
     const KEY_A = "ClientPart_99"; 
     const KEY_B = process.env.XOR_KEY_B || "ServerPart_77"; 
     const dataBuf = Buffer.from(finalScript);
-    const keyBuf = Buffer.from(KEY_A + KEY_B);
+    
+    // We add the required GG name to the XOR key for 100% Anti-Dump
+    const keyBuf = Buffer.from(KEY_A + KEY_B + REQUIRED_GG);
     
     let encryptedArray = [];
     for (let i = 0; i < dataBuf.length; i++) {
