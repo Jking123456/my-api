@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   // 1. Authorization & Package Check
   // We now accept 'gg_pkg' from the client to verify the Game Guardian version
   const { key, pkg, gg_pkg } = req.query;
-  const REQUIRED_GG = "com.uwrzaeg";
+  const REQUIRED_GG = "com.lulu.luluboxsuper";
 
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
     return res.status(401).send('gg.alert("❌ Unauthorized Access!")');
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const ggError = 
       `gg.alert("❌ SECURITY ALERT: UNRECOGNIZED ENVIRONMENT\\n\\n` +
       `This script is locked to official PRINZVAN builds.\\n` +
-      `Please use the authorized Game Guardian (Pkg: ${REQUIRED_GG})")\n inside of lulubox super` +
+      `Please use the authorized Game Guardian (Pkg: ${REQUIRED_GG})")\n inside the lulubox super` +
       `os.exit()`;
     return res.status(403).send(ggError);
   }
