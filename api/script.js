@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   // 🛡️ Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).send('gg.alert("❌ Unauthorized Request Method!")');
+    return res.status(405).send('gg.alert("❌ Unauthorized!")');
   }
 
   const { key, pkg, pass } = req.body; // Added 'pass' to the body destructing
