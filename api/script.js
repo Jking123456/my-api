@@ -3,20 +3,19 @@ export default async function handler(req, res) {
     return res.status(405).send('gg.alert("❌ Unauthorized Request")');
   }
 
-  const { key, pkg, pass } = req.body;
+  const { pass } = req.body; // Loader now only sends 'pass'
 
-  // 1. Password Check against Vercel Environment Variable
-  const MASTER_PASS = process.env.SCRIPT_PASSWORD || "default_backup_pass";
-  
+  // 🛡️ SERVER-SIDE SECRETS (Moved from Loader to here)
+  const MASTER_PASS = process.env.SCRIPT_PASSWORD || "kupalkaba";
+  const ADMIN_KEY_INTERNAL = process.env.ADMIN_KEY || "170555";
+  const TARGET_PKG_INTERNAL = "com.mobile.legends";
+
+  // 1. Password Check
   if (pass !== MASTER_PASS) {
     return res.status(403).send(`gg.alert("❌ [ ACCESS DENIED ] ❌\\n\\nInvalid Password.\\n\\nAdmin: ${process.env.ADMIN_NOTICE || "Admin"}")`);
   }
 
-  // 2. Security & Expiry Checks
-  if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
-    return res.status(401).send('gg.alert("❌ Unauthorized Access!")');
-  }
-
+  // 2. Expiry Check
   const EXPIRY = parseInt(process.env.EXPIRY_TIMESTAMP) || 1800000000;
   const now = Math.floor(Date.now() / 1000);
   if (now > EXPIRY) {
@@ -33,6 +32,7 @@ export default async function handler(req, res) {
     const diff = EXPIRY - now;
     const timeStr = `🕒 Expire: ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
     
+    // Values are injected here - the user's loader never sees them
     const injection = 
       `_G.time_left = "${timeStr}";\n` +
       `_G.mh_v = ${process.env.MAPHACK_VALUE || "98784247823"};\n` +
