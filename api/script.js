@@ -1,12 +1,17 @@
 export default async function handler(req, res) {
   // 🛡️ Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).send('gg.alert("❌ Ah ULOL!!!")');
+    return res.status(405).send('gg.alert("❌ Unauthorized Request Method!")');
   }
 
-  const { key, pkg } = req.body;
+  const { key, pkg, pass } = req.body; // Added 'pass' to the body destructing
 
-  // 1. Security Check
+  // 1. Password & Key Security Check
+  // Server-side double check for the password 'kupalkaba'
+  if (pass !== "kupalkaba") {
+     return res.status(403).send('gg.alert("❌ INCORRECT PASSWORD!\\n\\nPlease contact the Admin to get the password.")');
+  }
+
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
     return res.status(401).send('gg.alert("❌ Unauthorized Access!")');
   }
@@ -20,12 +25,8 @@ export default async function handler(req, res) {
   }
 
   // 3. Announcement System
-  // Set the "ADMIN_NOTICE" variable in Vercel to show a message
-  const notice = process.env.ADMIN_NOTICE || "";
-  let noticeInject = "";
-  if (notice !== "") {
-    noticeInject = `gg.alert("📢 [ ADMIN ANNOUNCEMENT ] 📢\\n\\n${notice}");\n`;
-  }
+  const notice = process.env.ADMIN_NOTICE || "No new announcements.";
+  let noticeInject = `gg.alert("📢 [ ADMIN ANNOUNCEMENT ] 📢\\n\\n${notice}");\n`;
 
   // 4. Fetch Script from GitHub
   const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
@@ -37,7 +38,6 @@ export default async function handler(req, res) {
     const diff = EXPIRY - now;
     const timeStr = `🕒 Expire: ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
     
-    // Inject Notice, Time, and Maphack values
     const injection = 
       `_G.time_left = "${timeStr}";\n` +
       `_G.mh_v = ${process.env.MAPHACK_VALUE || "98784247823"};\n` +
@@ -61,4 +61,4 @@ export default async function handler(req, res) {
   } else {
     res.status(500).send('gg.alert("❌ GitHub Sync Failed")');
   }
-}
+  }
