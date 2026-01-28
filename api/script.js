@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const MASTER_PASS = process.env.SCRIPT_PASSWORD || "default_backup_pass";
   
   if (pass !== MASTER_PASS) {
-    return res.status(403).send(`gg.alert("❌ [ ACCESS DENIED ] ❌\\n\\nInvalid Password.\\n\\nContact Admin: ${process.env.ADMIN_NOTICE || "Admin"}")`);
+    return res.status(403).send(`gg.alert("❌ [ ACCESS DENIED ] ❌\\n\\nInvalid Password.\\n\\nAdmin: ${process.env.ADMIN_NOTICE || "Admin"}")`);
   }
 
   // 2. Security & Expiry Checks
