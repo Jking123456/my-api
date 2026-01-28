@@ -1,34 +1,29 @@
 export default async function handler(req, res) {
-  // 🛡️ Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).send('gg.alert("❌ Unauthorized!")');
+    return res.status(405).send('gg.alert("❌ Unauthorized Request")');
   }
 
-  const { key, pkg, pass } = req.body; // Added 'pass' to the body destructing
+  const { key, pkg, pass } = req.body;
 
-  // 1. Password & Key Security Check
-  // Server-side double check for the password 'kupalkaba'
-  if (pass !== "kupalkaba") {
-     return res.status(403).send('gg.alert("❌ INCORRECT PASSWORD!\\n\\nPlease contact the Admin to get the password.")');
+  // 1. Password Check against Vercel Environment Variable
+  const MASTER_PASS = process.env.SCRIPT_PASSWORD || "default_backup_pass";
+  
+  if (pass !== MASTER_PASS) {
+    return res.status(403).send(`gg.alert("❌ [ ACCESS DENIED ] ❌\\n\\nInvalid Password.\\n\\nContact Admin: ${process.env.ADMIN_NOTICE || "Admin"}")`);
   }
 
+  // 2. Security & Expiry Checks
   if (key !== process.env.ADMIN_KEY || pkg !== "com.mobile.legends") {
     return res.status(401).send('gg.alert("❌ Unauthorized Access!")');
   }
 
-  // 2. Expiry Check
   const EXPIRY = parseInt(process.env.EXPIRY_TIMESTAMP) || 1800000000;
   const now = Math.floor(Date.now() / 1000);
-
   if (now > EXPIRY) {
-    return res.status(403).send('gg.alert("⚠️ [ SUBSCRIPTION EXPIRED ] ⚠️\\n\\nPlease contact the owner to renew.")');
+    return res.status(403).send('gg.alert("⚠️ [ SUBSCRIPTION EXPIRED ] ⚠️")');
   }
 
-  // 3. Announcement System
-  const notice = process.env.ADMIN_NOTICE || "No new announcements.";
-  let noticeInject = `gg.alert("📢 [ ADMIN ANNOUNCEMENT ] 📢\\n\\n${notice}");\n`;
-
-  // 4. Fetch Script from GitHub
+  // 3. Fetch Script from GitHub
   const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
     headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}` }
   });
@@ -43,9 +38,9 @@ export default async function handler(req, res) {
       `_G.mh_v = ${process.env.MAPHACK_VALUE || "98784247823"};\n` +
       `_G.dr_p = ${process.env.DRONE_DATA_JSON || "{}"};\n\n`;
 
-    const finalScript = noticeInject + injection + rawScript;
+    const finalScript = injection + rawScript;
 
-    // 5. XOR Encryption
+    // XOR Encryption
     const KEY_A = "ClientPart_99"; 
     const KEY_B = process.env.XOR_KEY_B || "ServerPart_77"; 
     const dataBuf = Buffer.from(finalScript);
@@ -61,4 +56,4 @@ export default async function handler(req, res) {
   } else {
     res.status(500).send('gg.alert("❌ GitHub Sync Failed")');
   }
-  }
+}
