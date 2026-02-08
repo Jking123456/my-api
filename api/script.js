@@ -17,18 +17,16 @@ export default async function handler(req, res) {
   const now = Math.floor(Date.now() / 1000);
   if (now > keyData.expiry) return res.status(403).send('gg.alert("⚠️ License Expired")');
 
-  // Multi-Device HWID Logic
   let hwidList = keyData.hwid || [];
   if (!hwidList.includes(hwid)) {
     if (hwidList.length >= keyData.maxDevices) {
-      return res.status(403).send(`gg.alert("❌ Device Limit Reached!\\nCapacity: ${keyData.maxDevices}/${keyData.maxDevices}")`);
+      return res.status(403).send(`gg.alert("❌ Device Limit Reached!")`);
     }
     hwidList.push(hwid);
     keyData.hwid = hwidList;
     await redis.set(keyName, keyData);
   }
 
-  // Fetch Script from GitHub
   const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
     headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}` }
   });
@@ -41,17 +39,18 @@ export default async function handler(req, res) {
     const injection = `_G.TIME_LEFT = "${timeStr}";\n_G.DEVICE_INFO = "${hwidList.length}/${keyData.maxDevices}";\n\n`;
     const finalScript = injection + rawScript;
 
-    // XOR Encryption
     const KEY_A = "ClientPart_99"; 
     const KEY_B = process.env.XOR_KEY_B || "ServerPart_77"; 
+    
     const dataBuf = Buffer.from(finalScript);
     const keyBuf = Buffer.from(KEY_A + KEY_B);
     let encrypted = dataBuf.map((b, i) => b ^ keyBuf[i % keyBuf.length]);
 
-    // --- CRITICAL FIX FOR HEADERS ---
-    res.setHeader('Access-Control-Expose-Headers', 'X-Session-Token');
-    res.setHeader('X-Session-Token', KEY_B);
-    res.status(200).send(Array.from(encrypted).join(","));
+    // 🛡️ FAIL-SAFE: Send KEY_B inside the JSON body instead of Headers
+    res.status(200).json({
+      session: KEY_B,
+      payload: Array.from(encrypted).join(",")
+    });
   } else {
     res.status(500).send('gg.alert("❌ GitHub Sync Failed")');
   }
