@@ -6,36 +6,29 @@ const redis = new Redis({
 });
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('gg.alert("❌ POST Only")');
+  if (req.method !== 'POST') return res.status(405).send('gg.alert("❌ POST Required")');
 
   const { license, hwid, model } = req.body;
   const keyName = `license:${license}`;
   const keyData = await redis.get(keyName);
 
-  if (!keyData) return res.status(403).send('gg.alert("❌ License not found.")');
+  if (!keyData) return res.status(403).send('gg.alert("❌ License Not Found")');
 
   const now = Math.floor(Date.now() / 1000);
-  if (now > keyData.expiry) return res.status(403).send('gg.alert("⚠️ License Expired.")');
+  if (now > keyData.expiry) return res.status(403).send('gg.alert("⚠️ License Expired")');
 
-  // --- UNIVERSAL HWID LOCK ---
+  // Multi-Device HWID Logic
   let hwidList = keyData.hwid || [];
-  
   if (!hwidList.includes(hwid)) {
     if (hwidList.length >= keyData.maxDevices) {
-      return res.status(403).send(`gg.alert("❌ Device Limit Reached (${keyData.maxDevices}/${keyData.maxDevices})")`);
+      return res.status(403).send(`gg.alert("❌ Device Limit Reached!\\nCapacity: ${keyData.maxDevices}/${keyData.maxDevices}")`);
     }
-    
-    // Lock this new device ID
     hwidList.push(hwid);
     keyData.hwid = hwidList;
-    
-    // Also save the model name for your logs in Upstash
-    keyData.last_device_model = model; 
-    
     await redis.set(keyName, keyData);
   }
 
-  // --- FETCH SCRIPT ---
+  // Fetch Script from GitHub
   const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
     headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}` }
   });
@@ -45,7 +38,7 @@ export default async function handler(req, res) {
     const diff = keyData.expiry - now;
     const timeStr = `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
     
-    const injection = `_G.TIME_LEFT = "${timeStr}";\n_G.DEVICES = "${hwidList.length}/${keyData.maxDevices}";\n\n`;
+    const injection = `_G.TIME_LEFT = "${timeStr}";\n_G.DEVICE_INFO = "${hwidList.length}/${keyData.maxDevices}";\n\n`;
     const finalScript = injection + rawScript;
 
     // XOR Encryption
@@ -55,7 +48,11 @@ export default async function handler(req, res) {
     const keyBuf = Buffer.from(KEY_A + KEY_B);
     let encrypted = dataBuf.map((b, i) => b ^ keyBuf[i % keyBuf.length]);
 
+    // --- CRITICAL FIX FOR HEADERS ---
+    res.setHeader('Access-Control-Expose-Headers', 'X-Session-Token');
     res.setHeader('X-Session-Token', KEY_B);
     res.status(200).send(Array.from(encrypted).join(","));
+  } else {
+    res.status(500).send('gg.alert("❌ GitHub Sync Failed")');
   }
 }
