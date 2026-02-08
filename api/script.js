@@ -7,38 +7,62 @@ const redis = new Redis({
 
 export default async function handler(req, res) {
   try {
+    // 1. Only allow POST requests from the Loader
     if (req.method !== 'POST') {
       return res.status(405).json({ auth: false, msg: "Method Not Allowed" });
     }
 
     const { license, hwid, model } = req.body;
+
+    // 2. CRITICAL: Check if Device is Permanently Banned
+    const isBlocked = await redis.sismember("blocked_devices", hwid);
+    if (isBlocked) {
+      return res.status(200).json({ 
+        auth: false, 
+        msg: "❌ DEVICE BANNED\nYour Hardware ID has been blacklisted by the Admin." 
+      });
+    }
+
+    // 3. Validate License existence
     const keyName = `license:${license}`;
     const keyData = await redis.get(keyName);
 
-    // 1. Validate License
     if (!keyData) {
       return res.status(200).json({ auth: false, msg: "❌ License Key Not Found" });
     }
 
-    // 2. Check Expiry
+    // 4. Check Expiration
     const now = Math.floor(Date.now() / 1000);
     if (now > keyData.expiry) {
       return res.status(200).json({ auth: false, msg: "⚠️ License has Expired" });
     }
 
-    // 3. HWID Multi-Device Lock (Universal)
+    // 5. Universal HWID Lock & Monitoring
     let hwidList = keyData.hwid || [];
+    let deviceModels = keyData.deviceModels || {}; // Track which model belongs to which ID
+
     if (!hwidList.includes(hwid)) {
-      if (hwidList.length >= (keyData.maxDevices || 1)) {
-        return res.status(200).json({ auth: false, msg: `❌ Device Limit Reached (${hwidList.length}/${keyData.maxDevices})` });
+      // Check if we hit the device limit (default to 1 if not set)
+      const max = keyData.maxDevices || 1;
+      if (hwidList.length >= max) {
+        return res.status(200).json({ 
+          auth: false, 
+          msg: `❌ Device Limit Reached!\nCapacity: ${hwidList.length}/${max}` 
+        });
       }
+      
+      // Register new device
       hwidList.push(hwid);
+      deviceModels[hwid] = model || "Unknown Device";
+      
       keyData.hwid = hwidList;
-      keyData.last_model = model; // Store model for admin logs
+      keyData.deviceModels = deviceModels;
+      keyData.last_login = now;
+      
       await redis.set(keyName, keyData);
     }
 
-    // 4. Fetch Script from GitHub
+    // 6. Fetch Script from Private GitHub
     const response = await fetch(`https://raw.githubusercontent.com/Jking123456/mlbb-maphack-drone/main/main.lua`, {
       headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}` }
     });
@@ -48,7 +72,7 @@ export default async function handler(req, res) {
       const diff = keyData.expiry - now;
       const timeStr = `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
       
-      // 5. Inject Values (Re-added from your Env Variables)
+      // 7. Inject Admin-defined values and User Info
       const injection = 
         `_G.time_left = "${timeStr}";\n` +
         `_G.device_info = "${hwidList.length}/${keyData.maxDevices}";\n` +
@@ -57,23 +81,24 @@ export default async function handler(req, res) {
 
       const finalScript = injection + rawScript;
 
-      // 6. XOR Encryption
+      // 8. XOR Encryption Handshake
       const KEY_A = "ClientPart_99"; 
       const KEY_B = process.env.XOR_KEY_B || "ServerPart_77"; 
       const dataBuf = Buffer.from(finalScript);
       const keyBuf = Buffer.from(KEY_A + KEY_B);
       let encrypted = dataBuf.map((b, i) => b ^ keyBuf[i % keyBuf.length]);
 
-      // ✅ RETURN AS JSON (Most stable for ELGG)
+      // 9. Send Payload as JSON (Body Handshake)
       return res.status(200).json({
         auth: true,
         session: KEY_B,
         payload: Array.from(encrypted).join(",")
       });
     } else {
-      return res.status(200).json({ auth: false, msg: "❌ GitHub Connection Error" });
+      return res.status(200).json({ auth: false, msg: "❌ GitHub Cloud Sync Error" });
     }
   } catch (err) {
-    return res.status(500).json({ auth: false, msg: "❌ Server Crash: " + err.message });
+    console.error(err);
+    return res.status(500).json({ auth: false, msg: "❌ Server Error: " + err.message });
   }
-}
+  }
